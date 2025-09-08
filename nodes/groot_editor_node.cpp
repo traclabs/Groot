@@ -20,6 +20,13 @@ using QtNodes::ConnectionStyle;
 
 int main(int argc, char *argv[])
 {
+    rclcpp::init(argc, argv);
+    std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared("groot_editor_node");
+    node->declare_parameter("bt_file", "");
+    
+    std::string bt_xml_file;
+    node->get_parameter("bt_file", bt_xml_file);
+
     QApplication app(argc, argv);
     app.setApplicationName("Groot");
     app.setWindowIcon(QPixmap(":/icons/BT.png"));
@@ -48,27 +55,32 @@ int main(int argc, char *argv[])
     MainWindow win( mode, monitor_address, monitor_pub_port,
                     monitor_srv_port, monitor_autoconnect );
 
-    QString fileName = "";
-    std::cout << "Loading file: " << fileName.toStdString() << std::endl;
 
     // Open file
-    /*QFile file(fileName);
-    if (!file.open(QIODevice::ReadOnly))
+    if(!bt_xml_file.empty())
     {
-       std::cout << "Cannot open file" << std::endl;
-       return 1;
+    QString fileName(bt_xml_file.c_str());
+    //std::cout << "Loading file: " << fileName.toStdString() << std::endl;
+
+      QFile file(fileName);
+      if (!file.open(QIODevice::ReadOnly))
+      {
+         RCLCPP_ERROR(node->get_logger(), "Cannot open file '%s'", bt_xml_file.c_str() );
+         return 1;
+      }
+
+      // Read file to xml
+      QString xml_text;
+      QTextStream in(&file);
+      while (!in.atEnd()) {
+            xml_text += in.readLine();
+      }
+
+      // Show xml
+      RCLCPP_INFO(node->get_logger(), "Loading file %s", bt_xml_file.c_str());
+      win.loadFromXML( xml_text );
     }
-
-    // Read file to xml
-    QString xml_text;
-    QTextStream in(&file);
-    while (!in.atEnd()) {
-          xml_text += in.readLine();
-    }
-
-    // Show xml
-    win.loadFromXML( xml_text );*/
-
+    
     win.show();
     return app.exec();
 }
