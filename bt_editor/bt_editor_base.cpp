@@ -1,5 +1,5 @@
 #include "bt_editor_base.h"
-#include <behaviortree_cpp_v3/decorators/subtree_node.h>
+#include <behaviortree_cpp/decorators/subtree_node.h>
 #include <QDebug>
 
 void AbsBehaviorTree::clear()
@@ -192,7 +192,7 @@ const NodeModels &BuiltinNodeModels()
     {
         BT::BehaviorTreeFactory factory;
 
-        factory.registerNodeType<BT::SubtreeNode>("Root");
+        factory.registerNodeType<BT::SubTreeNode>("Root");
 
         NodeModels out;
         for( const auto& it: factory.manifests())
@@ -218,6 +218,10 @@ PortModel &PortModel::operator =(const BT::PortInfo &src)
     this->direction = src.direction();
     this->description = QString::fromStdString(src.description());
     this->type_name = QString::fromStdString(BT::demangle(src.type()));
-    this->default_value = QString::fromStdString( src.defaultValue());
+    
+    std::string default_value = "";
+    if(!src.defaultValue().empty())
+      default_value = src.defaultValue().cast<std::string>();
+    this->default_value = QString::fromStdString(default_value);
     return *this;
 }
