@@ -10,10 +10,13 @@ find_package(ament_cmake QUIET)
 find_package(ament_index_cpp REQUIRED)
 
 set(dependencies
+  rclcpp
   behaviortree_cpp
 )
 
-find_package(behaviortree_cpp REQUIRED)
+foreach(dependency IN ITEMS ${dependencies})
+  find_package(${dependency} REQUIRED)
+endforeach()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -116,6 +119,10 @@ target_link_libraries(behavior_tree_editor ${GROOT_DEPENDENCIES} )
 add_executable(Groot ./bt_editor/main.cpp  ${RESOURCE_FILES})
 target_link_libraries(Groot behavior_tree_editor )
 
+add_executable(groot_editor_node nodes/groot_editor_node.cpp)
+target_link_libraries(groot_editor_node behavior_tree_editor )
+ament_target_dependencies(groot_editor_node ${dependencies})
+
 add_subdirectory(test)
 
 ######################################################
@@ -124,11 +131,29 @@ set( GROOT_LIB_DESTINATION   lib )
 set( GROOT_INC_DESTINATION   include )
 set( GROOT_BIN_DESTINATION   lib/${PROJECT_NAME} )
 
-INSTALL(TARGETS behavior_tree_editor LIBRARY DESTINATION ${GROOT_LIB_DESTINATION} )
-INSTALL(TARGETS Groot RUNTIME DESTINATION ${GROOT_BIN_DESTINATION} )
+INSTALL(TARGETS 
+ behavior_tree_editor
+ groot_editor_node
+ Groot 
+ LIBRARY DESTINATION ${GROOT_LIB_DESTINATION} 
+ RUNTIME DESTINATION ${GROOT_BIN_DESTINATION} 
+)
 
-  ament_export_include_directories(include)
-  ament_export_dependencies(${GROOT_DEPENDENCIES} ${dependencies})
-  ament_export_libraries(behavior_tree_editor)
-  ament_package()
+install(
+  DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
+)
+
+
+install(
+  DIRECTORY bt_editor/resources/svg
+  DESTINATION share/${PROJECT_NAME}/icons
+)
+
+ 
+
+ament_export_include_directories(include)
+ament_export_dependencies(${GROOT_DEPENDENCIES} ${dependencies})
+ament_export_libraries(behavior_tree_editor)
+ament_package()
 
