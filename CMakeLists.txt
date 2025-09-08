@@ -19,7 +19,6 @@ foreach(dependency IN ITEMS ${dependencies})
 endforeach()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
@@ -35,16 +34,6 @@ endif()
 
 add_subdirectory( QtNodeEditor )
 
-##########################################
-# FIX ME in the future....
-
-set(BUILD_EXAMPLES   OFF CACHE BOOL "")
-set(BUILD_UNIT_TESTS OFF CACHE BOOL "")
-set(BUILD_TOOLS OFF CACHE BOOL "")
-set(BUILD_TESTING OFF CACHE BOOL "")
-set(CATKIN_ENABLE_TESTING OFF CACHE BOOL "")
-
-##########################################
 
 set(APP_CPPS
     ./bt_editor/models/BehaviorTreeNodeModel.cpp
@@ -100,7 +89,7 @@ add_library(behavior_tree_editor SHARED
     ${FORMS_HEADERS}
 )
 
-SET(GROOT_DEPENDENCIES QtNodeEditor ncurses ncursesw tinfo )
+SET(GROOT_DEPENDENCIES QtNodeEditor ncurses ncursesw tinfo Qt5::Core Qt5::Svg )
 
 ament_target_dependencies(behavior_tree_editor ${dependencies})
 
@@ -144,12 +133,10 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
-
 install(
-  DIRECTORY bt_editor/resources/svg
-  DESTINATION share/${PROJECT_NAME}/icons
+  DIRECTORY bt_editor/resources
+  DESTINATION share/${PROJECT_NAME}/resources
 )
-
  
 
 ament_export_include_directories(include)

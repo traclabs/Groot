@@ -511,7 +511,8 @@ QToolButton:disabled{
           <bool>true</bool>
          </property>
         </widget>
-       </item><item>
+       </item>
+       <item>
         <widget class="QToolButton" name="toolButtonReorder">
          <property name="enabled">
           <bool>false</bool>
@@ -905,6 +906,7 @@ QToolButton:disabled{
  <resources>
   <include location="resources/icons.qrc"/>
   <include location="resources/icons.qrc"/>
+  <include location="../../../../../.designer/backup/resources/icons.qrc"/>
  </resources>
  <connections>
   <connection>
