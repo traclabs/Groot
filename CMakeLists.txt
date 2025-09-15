@@ -53,12 +53,6 @@ set(APP_CPPS
     ./bt_editor/XML_utilities.cpp
     )
 
-set(RESOURCE_FILES
-    ./bt_editor/resources/icons.qrc
-    ./bt_editor/resources/style.qrc
-    ./test_data/test_files.qrc
-    )
-
 set(FORMS_UI
   ./bt_editor/about_dialog.ui
   ./bt_editor/mainwindow.ui
@@ -82,11 +76,19 @@ else()
     message(WARNING "ZeroMQ NOT found. Real-time monitoring disabled.")
 endif()
 
+
+set(RESOURCE_FILES
+  bt_editor/resources/icons.qrc
+  bt_editor/resources/style.qrc
+  test_data/test_files.qrc
+)
+
 QT5_WRAP_UI(FORMS_HEADERS ${FORMS_UI})
 
 add_library(behavior_tree_editor SHARED
     ${APP_CPPS}
     ${FORMS_HEADERS}
+    ${RESOURCE_FILES}
 )
 
 SET(GROOT_DEPENDENCIES QtNodeEditor ncurses ncursesw tinfo Qt5::Core Qt5::Svg )
@@ -105,11 +107,11 @@ endif()
 target_link_libraries(behavior_tree_editor ${GROOT_DEPENDENCIES} )
 
 
-add_executable(Groot ./bt_editor/main.cpp  ${RESOURCE_FILES})
-target_link_libraries(Groot behavior_tree_editor )
+#add_executable(Groot ./bt_editor/main.cpp ${RESOURCE_FILES})
+#target_link_libraries(Groot behavior_tree_editor )
 
 add_executable(groot_editor_node nodes/groot_editor_node.cpp)
-target_link_libraries(groot_editor_node behavior_tree_editor )
+target_link_libraries(groot_editor_node behavior_tree_editor)
 ament_target_dependencies(groot_editor_node ${dependencies})
 
 add_subdirectory(test)
@@ -123,7 +125,7 @@ set( GROOT_BIN_DESTINATION   lib/${PROJECT_NAME} )
 INSTALL(TARGETS 
  behavior_tree_editor
  groot_editor_node
- Groot 
+# Groot 
  LIBRARY DESTINATION ${GROOT_LIB_DESTINATION} 
  RUNTIME DESTINATION ${GROOT_BIN_DESTINATION} 
 )
@@ -132,12 +134,6 @@ install(
   DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
 )
-
-install(
-  DIRECTORY bt_editor/resources
-  DESTINATION share/${PROJECT_NAME}/resources
-)
- 
 
 ament_export_include_directories(include)
 ament_export_dependencies(${GROOT_DEPENDENCIES} ${dependencies})

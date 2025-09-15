@@ -22,9 +22,13 @@ int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
     std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared("groot_editor_node");
-    node->declare_parameter("bt_file", "");
-    
+
+    node->declare_parameter("model_files", rclcpp::PARAMETER_STRING_ARRAY);
+    node->declare_parameter("bt_file", rclcpp::PARAMETER_STRING);
+        
+    std::vector<std::string> model_files;
     std::string bt_xml_file;
+    node->get_parameter("model_files", model_files);
     node->get_parameter("bt_file", bt_xml_file);
 
     QApplication app(argc, argv);
@@ -55,12 +59,16 @@ int main(int argc, char *argv[])
     MainWindow win( mode, monitor_address, monitor_pub_port,
                     monitor_srv_port, monitor_autoconnect );
 
+    // Model file
+    RCLCPP_INFO(node->get_logger(), "Number of model files received: %lu", model_files.size());
+    for(auto mi : model_files)
+      RCLCPP_INFO(node->get_logger(), "Model: ", mi.c_str());
 
-    // Open file
+    // Open BT file
     if(!bt_xml_file.empty())
     {
-    QString fileName(bt_xml_file.c_str());
-    //std::cout << "Loading file: " << fileName.toStdString() << std::endl;
+      QString fileName(bt_xml_file.c_str());
+      RCLCPP_INFO(node->get_logger(), "Loading file: %s", fileName.toStdString().c_str());
 
       QFile file(fileName);
       if (!file.open(QIODevice::ReadOnly))
@@ -77,8 +85,8 @@ int main(int argc, char *argv[])
       }
 
       // Show xml
-      RCLCPP_INFO(node->get_logger(), "Loading file %s", bt_xml_file.c_str());
-      win.loadFromXML( xml_text );
+      RCLCPP_INFO(node->get_logger(), "Loading file %s -- NOT YET!!!", bt_xml_file.c_str());
+      //win.loadFromXML( xml_text );
     }
     
     win.show();
