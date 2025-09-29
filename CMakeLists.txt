@@ -114,6 +114,11 @@ add_executable(groot_editor_node nodes/groot_editor_node.cpp)
 target_link_libraries(groot_editor_node behavior_tree_editor)
 ament_target_dependencies(groot_editor_node ${dependencies})
 
+add_executable(groot_monitor_node nodes/groot_monitor_node.cpp)
+target_link_libraries(groot_monitor_node behavior_tree_editor)
+ament_target_dependencies(groot_monitor_node ${dependencies})
+
+
 add_subdirectory(test)
 
 ######################################################
@@ -125,6 +130,7 @@ set( GROOT_BIN_DESTINATION   lib/${PROJECT_NAME} )
 INSTALL(TARGETS 
  behavior_tree_editor
  groot_editor_node
+ groot_monitor_node
 # Groot 
  LIBRARY DESTINATION ${GROOT_LIB_DESTINATION} 
  RUNTIME DESTINATION ${GROOT_BIN_DESTINATION} 

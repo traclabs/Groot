@@ -35,6 +35,10 @@
 
 #include "ui_about_dialog.h"
 
+#include <rclcpp/rclcpp.hpp>
+
+const auto logger = rclcpp::get_logger("groot");
+
 using QtNodes::DataModelRegistry;
 using QtNodes::FlowView;
 using QtNodes::FlowScene;
@@ -95,7 +99,7 @@ MainWindow::MainWindow(GraphicMode initial_mode,
     {
         registerModel( model.first, model.second );
         _treenode_models.insert( { model.first, model.second } );
-        qDebug() << "adding model: " << model.first;
+        RCLCPP_DEBUG_STREAM(logger, "Adding model: " << model.first.toStdString() );
     }
     //------------------------------------------------------
 
