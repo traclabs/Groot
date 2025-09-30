@@ -18,6 +18,36 @@ using QtNodes::FlowViewStyle;
 using QtNodes::NodeStyle;
 using QtNodes::ConnectionStyle;
 
+const auto logger = rclcpp::get_logger("groot");
+
+bool loadFileToString(const std::string &_filename, QString &_xml_text)
+{
+  if(_filename.empty())
+    return false;
+    
+  QString fileName(_filename.c_str());
+
+  QFile file(fileName);
+  if (!file.open(QIODevice::ReadOnly))
+  {
+     RCLCPP_ERROR(logger, "Cannot open file '%s'", _filename.c_str() );
+     return 1;
+  }
+
+  // Read file to xml
+  QString xml_text;
+  QTextStream in(&file);
+  while (!in.atEnd()) {
+    xml_text += in.readLine();
+  }
+ 
+  _xml_text = xml_text;
+  return true;     
+}      
+
+/**
+ * @function main
+ */
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
@@ -38,8 +68,6 @@ int main(int argc, char *argv[])
     app.setOrganizationDomain("eurecat.org");
 
     qRegisterMetaType<AbsBehaviorTree>();
-
-
 
     QFile styleFile( ":/stylesheet.qss" );
     styleFile.open( QFile::ReadOnly );
@@ -62,33 +90,27 @@ int main(int argc, char *argv[])
     // Model file
     RCLCPP_INFO(node->get_logger(), "Number of model files received: %lu", model_files.size());
     for(auto mi : model_files)
-      RCLCPP_INFO(node->get_logger(), "* Model: %s", mi.c_str());
-
+    {
+      RCLCPP_INFO(node->get_logger(), "* Attempting to load Model: %s", mi.c_str());
+      QString model_text;
+      if( loadFileToString(mi, model_text) )
+        win.loadFromXML(model_text);
+    }
+    
     // Open BT file
     if(!bt_xml_file.empty())
     {
-      QString fileName(bt_xml_file.c_str());
-      RCLCPP_INFO(node->get_logger(), "Loading file: %s", fileName.toStdString().c_str());
-
-      QFile file(fileName);
-      if (!file.open(QIODevice::ReadOnly))
-      {
-         RCLCPP_ERROR(node->get_logger(), "Cannot open file '%s'", bt_xml_file.c_str() );
-         return 1;
-      }
-
-      // Read file to xml
       QString xml_text;
-      QTextStream in(&file);
-      while (!in.atEnd()) {
-            xml_text += in.readLine();
-      }
-
-      // Show xml
-      RCLCPP_INFO(node->get_logger(), "Loading file %s", bt_xml_file.c_str());
-      win.loadFromXML( xml_text );
+      if(loadFileToString(bt_xml_file, xml_text))
+      {
+        // Show xml
+        RCLCPP_INFO(node->get_logger(), "Loading file %s", bt_xml_file.c_str());
+        win.loadFromXML( xml_text );
+      }  
     }
     
     win.show();
     return app.exec();
 }
+
+

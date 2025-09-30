@@ -9,6 +9,7 @@
 
 #include "mainwindow.h"
 #include "utils.h"
+#include <rclcpp/rclcpp.hpp>
 
 SidepanelMonitor::SidepanelMonitor(QWidget *parent,
                                    const QString &address,
@@ -135,6 +136,9 @@ void SidepanelMonitor::on_timer()
     }
 }
 
+/**
+ * @function getTreeFromServer
+ */
 bool SidepanelMonitor::getTreeFromServer()
 {
     try{
@@ -155,6 +159,7 @@ bool SidepanelMonitor::getTreeFromServer()
         }
 
         const char* buffer = reinterpret_cast<const char*>(reply.data());
+
         auto fb_behavior_tree = Serialization::GetBehaviorTree( buffer );
 
         auto res_pair = BuildTreeFromFlatbuffers( fb_behavior_tree );

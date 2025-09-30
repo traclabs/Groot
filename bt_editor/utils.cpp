@@ -9,6 +9,8 @@
 #include "models/SubtreeNodeModel.hpp"
 #include "models/RootNodeModel.hpp"
 
+#include <rclcpp/rclcpp.hpp>
+
 using QtNodes::PortLayout;
 using QtNodes::DataModelRegistry;
 using QtNodes::Node;
