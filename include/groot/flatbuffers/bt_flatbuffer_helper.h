@@ -1,7 +1,7 @@
 #pragma once
 
-#include "behaviortree_cpp/bt_factory.h"
-#include <bt_editor/fixes/BT_logger_generated.h>
+#include <behaviortree_cpp/bt_factory.h>
+#include <groot/flatbuffers/BT_logger_generated.h>
 
 namespace BT
 {

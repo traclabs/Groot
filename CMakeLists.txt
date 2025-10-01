@@ -26,11 +26,7 @@ set(CMAKE_AUTORCC ON)
 add_definitions(${Qt5Widgets_DEFINITIONS} -DNODE_EDITOR_STATIC )
 set(CMAKE_CXX_FLAGS "${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS}")
 
-if(ament_cmake_FOUND)
-  INCLUDE_DIRECTORIES(include ./QtNodeEditor/include ./)
-else()
-  INCLUDE_DIRECTORIES(${catkin_INCLUDE_DIRS} ./QtNodeEditor/include ./  )
-endif()
+include_directories(include ./QtNodeEditor/include ./)
 
 add_subdirectory( QtNodeEditor )
 
