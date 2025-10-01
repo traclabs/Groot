@@ -20,6 +20,7 @@ using QtNodes::ConnectionStyle;
 
 const auto logger = rclcpp::get_logger("groot");
 
+/** @brief Helper file to load either BT files or node files */
 bool loadFileToString(const std::string &_filename, QString &_xml_text)
 {
   if(_filename.empty())
@@ -51,7 +52,7 @@ bool loadFileToString(const std::string &_filename, QString &_xml_text)
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
-    std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared("groot_editor_node");
+    std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared("groot_monitor_node");
 
     node->declare_parameter("model_files", rclcpp::PARAMETER_STRING_ARRAY);
     node->declare_parameter("bt_file", rclcpp::PARAMETER_STRING);
@@ -74,7 +75,6 @@ int main(int argc, char *argv[])
     QString style( styleFile.readAll() );
     app.setStyleSheet( style );
 
-
     auto mode = GraphicMode::MONITOR;
 
     // Get the monitor options.
@@ -87,8 +87,8 @@ int main(int argc, char *argv[])
     MainWindow win( mode, monitor_address, monitor_pub_port,
                     monitor_srv_port, monitor_autoconnect );
 
-    // Model file
-    RCLCPP_INFO(node->get_logger(), "Number of model files received: %lu", model_files.size());
+    // Model file(s)
+    RCLCPP_INFO(node->get_logger(), "* Number of models to load: %lu", model_files.size());
     for(auto mi : model_files)
     {
       RCLCPP_INFO(node->get_logger(), "* Attempting to load Model: %s", mi.c_str());
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
       if(loadFileToString(bt_xml_file, xml_text))
       {
         // Show xml
-        RCLCPP_INFO(node->get_logger(), "Loading file %s", bt_xml_file.c_str());
+        RCLCPP_INFO(node->get_logger(), "* Loading BT xml file %s", bt_xml_file.c_str());
         win.loadFromXML( xml_text );
       }  
     }

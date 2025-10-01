@@ -8,6 +8,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 
 find_package(ament_cmake QUIET)
 find_package(ament_index_cpp REQUIRED)
+find_package(cppzmq REQUIRED)
 
 set(dependencies
   rclcpp
@@ -26,7 +27,12 @@ set(CMAKE_AUTORCC ON)
 add_definitions(${Qt5Widgets_DEFINITIONS} -DNODE_EDITOR_STATIC )
 set(CMAKE_CXX_FLAGS "${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS}")
 
-include_directories(include ./QtNodeEditor/include ./)
+include_directories(
+ include 
+ ./QtNodeEditor/include 
+ ./
+ ${cppzmq_INCLUDE_DIR}
+)
 
 add_subdirectory( QtNodeEditor )
 
@@ -102,7 +108,6 @@ endif()
 
 target_link_libraries(behavior_tree_editor ${GROOT_DEPENDENCIES} )
 
-
 #add_executable(Groot ./bt_editor/main.cpp ${RESOURCE_FILES})
 #target_link_libraries(Groot behavior_tree_editor )
 
@@ -113,6 +118,10 @@ ament_target_dependencies(groot_editor_node ${dependencies})
 add_executable(groot_monitor_node nodes/groot_monitor_node.cpp)
 target_link_libraries(groot_monitor_node behavior_tree_editor)
 ament_target_dependencies(groot_monitor_node ${dependencies})
+
+add_library(bt_zmq_publisher SHARED src/loggers/bt_zmq_publisher.cpp)
+target_link_libraries(bt_zmq_publisher ${cppzmq_LIBRARY})
+ament_target_dependencies(bt_zmq_publisher ${dependencies})
 
 
 add_subdirectory(test)
@@ -127,10 +136,15 @@ INSTALL(TARGETS
  behavior_tree_editor
  groot_editor_node
  groot_monitor_node
+ bt_zmq_publisher
 # Groot 
  LIBRARY DESTINATION ${GROOT_LIB_DESTINATION} 
  RUNTIME DESTINATION ${GROOT_BIN_DESTINATION} 
 )
+
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION include/${PROJECT_NAME}
+)  
 
 install(
   DIRECTORY launch
@@ -138,7 +152,7 @@ install(
 )
 
 ament_export_include_directories(include)
-ament_export_dependencies(${GROOT_DEPENDENCIES} ${dependencies})
-ament_export_libraries(behavior_tree_editor)
+ament_export_dependencies(${dependencies}) # ${GROOT_DEPENDENCIES} 
+ament_export_libraries(behavior_tree_editor bt_zmq_publisher)
 ament_package()
 

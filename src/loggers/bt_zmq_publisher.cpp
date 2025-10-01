@@ -1,7 +1,8 @@
 #include <future>
 #include <groot/loggers/bt_zmq_publisher.h>
 #include <groot/flatbuffers/bt_flatbuffer_helper.h>
-#include <cppzmq/zmq.hpp>
+//#include <cppzmq/zmq.hpp>
+#include "zmq.hpp"
 
 namespace BT
 {

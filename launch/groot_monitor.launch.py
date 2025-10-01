@@ -1,7 +1,7 @@
 import os
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
-from launch.substitutions import Command, FindExecutable, PathJoinSubstitution, LaunchConfiguration, PythonExpression, TextSubstitution
+from launch.substitutions import Command, FindExecutable, PathJoinSubstitution, LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from ament_index_python.packages import get_package_share_directory
@@ -12,11 +12,11 @@ def generate_launch_description():
   
   launch_args = [
     DeclareLaunchArgument("use_sim_time", default_value="False"),
-    DeclareLaunchArgument("model_files", default_value="['nana', 'beta']"),
+    DeclareLaunchArgument("model_files", default_value="[]"),
     DeclareLaunchArgument("bt_file", default_value="")    
   ]
   
-  groot = Node(
+  groot_monitor = Node(
         package="groot",
         executable="groot_monitor_node",
         name="groot",
@@ -32,6 +32,6 @@ def generate_launch_description():
   
   return LaunchDescription(
     launch_args + [
-      groot
+      groot_monitor
     ]
   )

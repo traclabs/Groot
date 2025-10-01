@@ -3,10 +3,12 @@
 
 #include <array>
 #include <future>
-#include "abstract_logger.h"
+#include <behaviortree_cpp/loggers/abstract_logger.h>
 
 namespace BT
 {
+using SerializedTransition = std::array<uint8_t, 12>;
+
 class PublisherZMQ : public StatusChangeLogger
 {
   static std::atomic<bool> ref_count;
