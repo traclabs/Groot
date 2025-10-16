@@ -61,6 +61,11 @@ main(int argc, char *argv[])
                                    "tree.xml");
     parser.addOption(file_option);
 
+    QCommandLineOption model_option(QStringList() << "model",
+                                    "Load a model file (can be specified multiple times)",
+                                    "model.xml");
+    parser.addOption(model_option);
+
     QCommandLineOption output_svg_option(QStringList() << "output-svg",
                                          "Save the input file to an svg",
                                          "output.svg");
@@ -155,6 +160,38 @@ main(int argc, char *argv[])
             win.loadFromXML( xml_text );
         }
 
+        if (parser.isSet(model_option))
+        {
+            // Get all values passed with --model
+            const QStringList model_files = parser.values(model_option);
+
+            if (model_files.isEmpty())
+            {
+                std::cout << "No model files specified." << std::endl;
+                return 1;
+            }
+
+            for (const QString& fileName : model_files)
+            {
+                std::cout << "Loading model: " << fileName.toStdString() << std::endl;
+
+                QFile file(fileName);
+                if (!file.open(QIODevice::ReadOnly))
+                {
+                    std::cout << "Cannot open model file: " << fileName.toStdString() << std::endl;
+                    continue; // Skip instead of aborting, so others can load
+                }
+
+                // Read file contents into a QString
+                QString xml_text;
+                QTextStream in(&file);
+                xml_text = in.readAll(); // simpler than line-by-line
+                file.close();
+
+                // Load XML content into the GUI
+                win.loadFromXML(xml_text);
+            }
+        }
 
         if( parser.isSet(output_svg_option) )
         {
