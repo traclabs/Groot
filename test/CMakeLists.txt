@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
 
 PROJECT(GrootTest LANGUAGES CXX)
 
@@ -26,4 +26,4 @@ set(RESOURCE_FILES
     )
 
 CompileTest( editor_test )
-CompileTest( replay_test )
+# CompileTest( replay_test )

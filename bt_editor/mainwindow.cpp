@@ -100,10 +100,10 @@ MainWindow::MainWindow(GraphicMode initial_mode,
     //------------------------------------------------------
 
     _editor_widget = new SidepanelEditor(_model_registry.get(), _treenode_models, this);
-    _replay_widget = new SidepanelReplay(this);
+    // _replay_widget = new SidepanelReplay(this);
 
     ui->leftFrame->layout()->addWidget( _editor_widget );
-    ui->leftFrame->layout()->addWidget( _replay_widget );
+    // ui->leftFrame->layout()->addWidget( _replay_widget );
 
 #ifdef ZMQ_FOUND
     _monitor_widget = new SidepanelMonitor(
@@ -193,19 +193,19 @@ MainWindow::MainWindow(GraphicMode initial_mode,
       onCreateAbsBehaviorTree(tree, bt_name, false);
     };
 
-    connect( _replay_widget, &SidepanelReplay::loadBehaviorTree,
-            this, createSingleTabBehaviorTree);
+    // connect( _replay_widget, &SidepanelReplay::loadBehaviorTree,
+    //         this, createSingleTabBehaviorTree);
 
-    connect( _replay_widget, &SidepanelReplay::addNewModel,
-            this, &MainWindow::onAddToModelRegistry);
+    // connect( _replay_widget, &SidepanelReplay::addNewModel,
+    //         this, &MainWindow::onAddToModelRegistry);
 
     connect( ui->toolButtonSaveFile, &QToolButton::clicked,
             this, &MainWindow::on_actionSave_triggered );
 
     connect( save_shortcut, &QShortcut::activated, this, &MainWindow::on_actionSave_triggered );
 
-    connect( _replay_widget, &SidepanelReplay::changeNodeStyle,
-            this, &MainWindow::onChangeNodesStatus);
+    // connect( _replay_widget, &SidepanelReplay::changeNodeStyle,
+    //         this, &MainWindow::onChangeNodesStatus);
 
 #ifdef ZMQ_FOUND
 
@@ -1301,7 +1301,7 @@ void MainWindow::onActionClearTriggered(bool create_new)
     }
 
     _editor_widget->clear();
-    _replay_widget->clear();
+    // _replay_widget->clear();
 #ifdef ZMQ_FOUND
     _monitor_widget->clear();
 #endif
@@ -1314,7 +1314,7 @@ void MainWindow::updateCurrentMode()
     const bool NOT_EDITOR = _current_mode != GraphicMode::EDITOR;
 
     _editor_widget->setHidden( NOT_EDITOR );
-    _replay_widget->setHidden( _current_mode != GraphicMode::REPLAY );
+    // _replay_widget->setHidden( _current_mode != GraphicMode::REPLAY );
 #ifdef ZMQ_FOUND
     _monitor_widget->setHidden( _current_mode != GraphicMode::MONITOR );
 #endif
@@ -1341,15 +1341,15 @@ void MainWindow::updateCurrentMode()
     {
         connect( ui->toolButtonLoadFile, &QToolButton::clicked,
                 this, &MainWindow::on_actionLoad_triggered );
-        disconnect( ui->toolButtonLoadFile, &QToolButton::clicked,
-                   _replay_widget, &SidepanelReplay::on_LoadLog );
+        // disconnect( ui->toolButtonLoadFile, &QToolButton::clicked,
+        //            _replay_widget, &SidepanelReplay::on_LoadLog );
     }
     else if( _current_mode == GraphicMode::REPLAY )
     {
         disconnect( ui->toolButtonLoadFile, &QToolButton::clicked,
                    this, &MainWindow::on_actionLoad_triggered );
-        connect( ui->toolButtonLoadFile, &QToolButton::clicked,
-                _replay_widget, &SidepanelReplay::on_LoadLog );
+        // connect( ui->toolButtonLoadFile, &QToolButton::clicked,
+        //         _replay_widget, &SidepanelReplay::on_LoadLog );
     }
     lockEditing( NOT_EDITOR );
 
@@ -1470,7 +1470,7 @@ void MainWindow::on_actionEditor_mode_triggered()
     _monitor_widget->clear();
 #endif
 
-    _replay_widget->clear();
+    // _replay_widget->clear();
 }
 
 void MainWindow::on_actionMonitor_mode_triggered()
@@ -1509,7 +1509,7 @@ void MainWindow::on_actionReplay_mode_triggered()
     if( res == QMessageBox::Ok)
     {
         onActionClearTriggered(true);
-        _replay_widget->clear();
+        // _replay_widget->clear();
         _current_mode = GraphicMode::REPLAY;
         updateCurrentMode();
     }

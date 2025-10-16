@@ -117,7 +117,7 @@ set(APP_CPPS
     ./bt_editor/startup_dialog.cpp
 
     ./bt_editor/sidepanel_editor.cpp
-    ./bt_editor/sidepanel_replay.cpp
+    # ./bt_editor/sidepanel_replay.cpp
     ./bt_editor/custom_node_dialog.cpp
 
     ./bt_editor/XML_utilities.cpp
