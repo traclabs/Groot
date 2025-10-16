@@ -9,6 +9,8 @@
 
 #include "mainwindow.h"
 #include "utils.h"
+#include "zmq_addon.hpp"
+#include "behaviortree_cpp/loggers/groot2_protocol.h"
 
 SidepanelMonitor::SidepanelMonitor(QWidget *parent,
                                    const QString &address,
@@ -56,78 +58,48 @@ void SidepanelMonitor::on_timer()
 {
     if( !_connected ) return;
 
-    zmq::message_t msg;
-    try{
-        while(  _zmq_subscriber.recv(msg) )
+    try {
+        zmq::socket_t zmq_client(_zmq_context, ZMQ_REQ);
+        zmq_client.connect(_connection_address_req.c_str());
+
+        // Build request header (RequestType::STATUS)
+        BT::Monitor::RequestHeader request(BT::Monitor::RequestType::STATUS);
+        std::string header_str = BT::Monitor::SerializeHeader(request);
+        zmq::message_t req_msg(header_str.data(), header_str.size());
+
+        // Send request
+        zmq_client.send(req_msg, zmq::send_flags::none);
+
+        // Receive reply (multipart: header + status buffer)
+        zmq::multipart_t multipart_msg;
+        if (!multipart_msg.recv(zmq_client)) return;
+        if (multipart_msg.size() < 2) return;
+
+        const std::string header_reply = multipart_msg[0].to_string();
+        const std::string status_str = multipart_msg[1].to_string();
+
+        std::vector<std::pair<int, NodeStatus>> node_status;
+        for (size_t offset = 0; offset + 3 <= status_str.size(); offset += 3)
         {
-            _msg_count++;
-            ui->labelCount->setText( QString("Messages received: %1").arg(_msg_count) );
+            uint16_t uid;
+            memcpy(&uid, &status_str[offset], sizeof(uint16_t));
+            uint8_t raw_status = static_cast<uint8_t>(status_str[offset + 2]);
+            NodeStatus status = static_cast<NodeStatus>(raw_status);
 
-            const char* buffer = reinterpret_cast<const char*>(msg.data());
+            auto it = _uid_to_index.find(uid);
+            if (it == _uid_to_index.end()) continue;
 
-            const uint32_t header_size = flatbuffers::ReadScalar<uint32_t>( buffer );
-            const uint32_t num_transitions = flatbuffers::ReadScalar<uint32_t>( &buffer[4+header_size] );
-
-            std::vector<std::pair<int, NodeStatus>> node_status;
-            // check uid in the index, if failed load tree from server
-            try{
-                for(size_t offset = 4; offset < header_size +4; offset +=3 )
-                {
-                    const uint16_t uid = flatbuffers::ReadScalar<uint16_t>(&buffer[offset]);
-                    _uid_to_index.at(uid);
-                }
-
-                for(size_t t=0; t < num_transitions; t++)
-                {
-                    size_t offset = 8 + header_size + 12*t;
-                    const uint16_t uid = flatbuffers::ReadScalar<uint16_t>(&buffer[offset+8]);
-                    _uid_to_index.at(uid);
-                }
-
-                for(size_t offset = 4; offset < header_size +4; offset +=3 )
-                {
-                    const uint16_t uid = flatbuffers::ReadScalar<uint16_t>(&buffer[offset]);
-                    const uint16_t index = _uid_to_index.at(uid);
-                    AbstractTreeNode* node = _loaded_tree.node( index );
-                    node->status = convert(flatbuffers::ReadScalar<Serialization::NodeStatus>(&buffer[offset+2] ));
-                }
-
-                //qDebug() << "--------";
-                for(size_t t=0; t < num_transitions; t++)
-                {
-                    size_t offset = 8 + header_size + 12*t;
-
-                    // const double t_sec  = flatbuffers::ReadScalar<uint32_t>( &buffer[offset] );
-                    // const double t_usec = flatbuffers::ReadScalar<uint32_t>( &buffer[offset+4] );
-                    // double timestamp = t_sec + t_usec* 0.000001;
-                    const uint16_t uid = flatbuffers::ReadScalar<uint16_t>(&buffer[offset+8]);
-                    const uint16_t index = _uid_to_index.at(uid);
-                    // NodeStatus prev_status = convert(flatbuffers::ReadScalar<Serialization::NodeStatus>(&buffer[index+10] ));
-                    NodeStatus status  = convert(flatbuffers::ReadScalar<Serialization::NodeStatus>(&buffer[offset+11] ));
-
-                    _loaded_tree.node(index)->status = status;
-                    node_status.push_back( {index, status} );
-
-                }
-            }
-            catch( std::out_of_range& err) {
-                qDebug() << "Reload tree from server";
-                if( !getTreeFromServer() ) {
-                    _connected = false;
-                    ui->lineEdit_address->setDisabled(false);
-                    _timer->stop();
-                    connectionUpdate(false);
-                    return;
-                }
-            }
-
-            // update the graphic part
-            emit changeNodeStyle( "BehaviorTree", node_status );
-
-            // lock editing of nodes
-            auto main_win = dynamic_cast<MainWindow*>( _parent );
-            main_win->lockEditing(true);
+            int index = it->second;
+            _loaded_tree.node(index)->status = status;
+            node_status.push_back( {index, status} );
         }
+
+        // update the graphic part
+        emit changeNodeStyle( "BehaviorTree", node_status );
+
+        // lock editing of nodes
+        auto main_win = dynamic_cast<MainWindow*>( _parent );
+        main_win->lockEditing(true);
     }
     catch( zmq::error_t& err)
     {
@@ -138,26 +110,35 @@ void SidepanelMonitor::on_timer()
 bool SidepanelMonitor::getTreeFromServer()
 {
     try{
-        zmq::message_t request(0);
-        zmq::message_t reply;
+        zmq::multipart_t request;
+        zmq::multipart_t reply;
 
         zmq::socket_t  zmq_client( _zmq_context, ZMQ_REQ );
         zmq_client.connect( _connection_address_req.c_str() );
 
-        zmq_client.setsockopt(ZMQ_RCVTIMEO, &_load_tree_timeout_ms, sizeof(int) );
+        zmq_client.set(zmq::sockopt::rcvtimeo, _load_tree_timeout_ms);
 
-        zmq_client.send(request, zmq::send_flags::none);
+        // Create FULLTREE request header
+        BT::Monitor::RequestHeader req(BT::Monitor::RequestType::FULLTREE);
+        request.addstr(BT::Monitor::SerializeHeader(req));
+        request.send(zmq_client);
 
-        auto bytes_received  = zmq_client.recv(reply, zmq::recv_flags::none);
-        if( !bytes_received || *bytes_received == 0 )
-        {
+        // Receive reply
+        reply.recv(zmq_client);
+        if (reply.size() < 2) {
             return false;
         }
 
-        const char* buffer = reinterpret_cast<const char*>(reply.data());
-        auto fb_behavior_tree = Serialization::GetBehaviorTree( buffer );
+        // Parse XML into QDomDocument
+        QDomDocument doc;
+        QString xml_str = QString::fromStdString(reply[1].to_string());
+        if (!doc.setContent(xml_str)) {
+            return false;
+        }
 
-        auto res_pair = BuildTreeFromFlatbuffers( fb_behavior_tree );
+        QDomElement document_root = doc.documentElement();
+
+        auto res_pair = BuildTreeFromGroot2Protocol(BuiltinNodeModels(), document_root);
 
         _loaded_tree  = std::move( res_pair.first );
         _uid_to_index = std::move( res_pair.second );
@@ -236,8 +217,8 @@ void SidepanelMonitor::on_Connect()
                 _zmq_subscriber.connect( _connection_address_pub.c_str() );
 
                 int timeout_ms = 1;
-                _zmq_subscriber.setsockopt(ZMQ_SUBSCRIBE, "", 0);
-                _zmq_subscriber.setsockopt(ZMQ_RCVTIMEO, &timeout_ms, sizeof(int) );
+                _zmq_subscriber.set(zmq::sockopt::subscribe, "");
+                _zmq_subscriber.set(zmq::sockopt::rcvtimeo, timeout_ms);
 
                 if( !getTreeFromServer() )
                 {

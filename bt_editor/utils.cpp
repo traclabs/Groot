@@ -8,6 +8,8 @@
 #include "nodes/internal/memory.hpp"
 #include "models/SubtreeNodeModel.hpp"
 #include "models/RootNodeModel.hpp"
+#include "behaviortree_cpp/loggers/groot2_protocol.h"
+#include "zmq_addon.hpp"
 
 using QtNodes::PortLayout;
 using QtNodes::DataModelRegistry;
@@ -386,73 +388,77 @@ AbsBehaviorTree BuildTreeFromXML(const QDomElement& bt_root, const NodeModels& m
 
 
 std::pair<AbsBehaviorTree, std::unordered_map<int, int>>
-BuildTreeFromFlatbuffers(const Serialization::BehaviorTree *fb_behavior_tree)
+BuildTreeFromGroot2Protocol(const NodeModels& models, const QDomElement& document_root)
 {
-    AbsBehaviorTree tree;
-    std::unordered_map<int, int> uid_to_index;
+  // 1. Find the BehaviorTree root element
+  const QDomElement bt_root = document_root.firstChildElement("BehaviorTree");
+  if (bt_root.isNull())
+  {
+    throw std::runtime_error("No <BehaviorTree> found in the XML");
+  }
 
-    AbstractTreeNode abs_root;
-    abs_root.instance_name = "Root";
-    abs_root.model.registration_ID = "Root";
-    abs_root.model.registration_ID = "Root";
-    abs_root.children_index.push_back( 1 );
+  // 2. Copy the base models (and extend it with new ones)
+  NodeModels all_models = models;
 
-    tree.addNode( nullptr, std::move(abs_root) );
+  const QDomElement tree_nodes_model = document_root.firstChildElement("TreeNodesModel");
+  for (QDomNode n = tree_nodes_model.firstChild(); !n.isNull(); n = n.nextSibling())
+  {
+    if (!n.isElement()) continue;
+    const QDomElement e = n.toElement();
 
-    //-----------------------------------------
-    NodeModels models;
-
-    for( const Serialization::NodeModel* model_node: *(fb_behavior_tree->node_models()) )
+    const QString registration_ID = e.attribute("ID");
+    if (registration_ID.isEmpty())
     {
-        NodeModel model;
-        model.registration_ID = model_node->registration_name()->c_str();
-        model.type = convert( model_node->type() );
-
-        for( const Serialization::PortModel* port: *(model_node->ports()) )
-        {
-            PortModel port_model;
-            QString port_name = port->port_name()->c_str();
-            port_model.direction = convert( port->direction() );
-            port_model.type_name = port->type_info()->c_str();
-            port_model.description = port->description()->c_str();
-
-            model.ports.insert( { port_name, std::move(port_model) } );
-        }
-
-        models.insert( { model.registration_ID, std::move(model)} );
+      qWarning() << "TreeNode element has no ID attribute";
+      continue;
     }
 
-    //-----------------------------------------
-    for( const Serialization::TreeNode* fb_node: *(fb_behavior_tree->nodes()) )
-    {
-        AbstractTreeNode abs_node;
-        abs_node.instance_name = fb_node->instance_name()->c_str();
-        const char* registration_ID = fb_node->registration_name()->c_str();
-        abs_node.status = convert( fb_node->status() );
-        abs_node.model = (models.at(registration_ID));
+    NodeModel model;
+    model.registration_ID = registration_ID;
+    model.type = convert(e.tagName());
 
-        for( const Serialization::PortConfig* pair: *(fb_node->port_remaps()) )
-        {
-            abs_node.ports_mapping.insert( { QString(pair->port_name()->c_str()),
-                                             QString(pair->remap()->c_str()) } );
-        }
-        int index = tree.nodesCount();
-        abs_node.index = index;
-        tree.nodes().push_back( std::move(abs_node) );
-        uid_to_index.insert( { fb_node->uid(), index} );
+    // Iterate over port definitions
+    for (QDomNode c = e.firstChild(); !c.isNull(); c = c.nextSibling())
+    {
+      if (!c.isElement()) continue;
+      const QDomElement d = c.toElement();
+
+      const QString tag = d.tagName();
+      if (tag != "input_port" && tag != "output_port") continue;
+
+      const QString port_name = d.attribute("name");
+      if (port_name.isEmpty())
+      {
+        qWarning() << tag << "element has no name attribute";
+        continue;
+      }
+
+      PortModel port_model;
+      port_model.direction = (tag == "input_port") ? BT::PortDirection::INPUT
+                                                   : BT::PortDirection::OUTPUT;
+      port_model.type_name = port_name;
+      port_model.description = d.text();
+
+      model.ports.insert({ port_name, std::move(port_model) });
     }
 
-    for(size_t index = 0; index < fb_behavior_tree->nodes()->size(); index++ )
-    {
-        const Serialization::TreeNode* fb_node = fb_behavior_tree->nodes()->Get(index);
-        AbstractTreeNode* abs_node = tree.node( index + 1);
-        for( const auto child_uid: *(fb_node->children_uid()) )
-        {
-            int child_index = uid_to_index[ child_uid ];
-            abs_node->children_index.push_back(child_index);
-        }
-    }
-    return { tree, uid_to_index };
+    // Add the completed model once (after processing its children)
+    all_models.insert({ model.registration_ID, std::move(model) });
+  }
+
+  // Build the tree from the combined model set
+  AbsBehaviorTree tree = BuildTreeFromXML(bt_root, all_models);
+
+  // Optional UID mapping — Groot2 doesn’t send numeric UIDs in XML
+  std::unordered_map<int, int> uid_map;
+  int index = 0;
+  for (auto& n : tree.nodes())
+  {
+    uid_map[index] = index;
+    ++index;
+  }
+
+  return { std::move(tree), std::move(uid_map) };
 }
 
 std::pair<QtNodes::NodeStyle, QtNodes::ConnectionStyle>
@@ -567,52 +573,27 @@ std::set<QString> GetModelsToRemove(QWidget* parent,
     return prev_custom_models;
 }
 
-BT::NodeType convert(Serialization::NodeType type)
+BT::NodeType convert(const QString& type)
 {
-    switch (type)
+    if (type == "ACTION")
     {
-    case Serialization::NodeType::ACTION:
         return BT::NodeType::ACTION;
-    case Serialization::NodeType::DECORATOR:
+    }
+    if (type == "DECORATOR")
+    {
         return BT::NodeType::DECORATOR;
-    case Serialization::NodeType::CONTROL:
+    }
+    if (type == "CONTROL")
+    {
         return BT::NodeType::CONTROL;
-    case Serialization::NodeType::CONDITION:
+    }
+    if (type == "CONDITION")
+    {
         return BT::NodeType::CONDITION;
-    case Serialization::NodeType::SUBTREE:
+    }
+    if (type == "SUBTREE")
+    {
         return BT::NodeType::SUBTREE;
-    case Serialization::NodeType::UNDEFINED:
-        return BT::NodeType::UNDEFINED;
     }
     return BT::NodeType::UNDEFINED;
-}
-
-BT::NodeStatus convert(Serialization::NodeStatus type)
-{
-    switch (type)
-    {
-    case Serialization::NodeStatus::IDLE:
-        return BT::NodeStatus::IDLE;
-    case Serialization::NodeStatus::SUCCESS:
-        return BT::NodeStatus::SUCCESS;
-    case Serialization::NodeStatus::RUNNING:
-        return BT::NodeStatus::RUNNING;
-    case Serialization::NodeStatus::FAILURE:
-        return BT::NodeStatus::FAILURE;
-    }
-    return BT::NodeStatus::IDLE;
-}
-
-BT::PortDirection convert(Serialization::PortDirection direction)
-{
-    switch (direction)
-    {
-    case Serialization::PortDirection::INPUT :
-        return BT::PortDirection::INPUT;
-    case Serialization::PortDirection::OUTPUT:
-        return BT::PortDirection::OUTPUT;
-    case Serialization::PortDirection::INOUT:
-        return BT::PortDirection::INOUT;
-    }
-    return BT::PortDirection::INOUT;
 }
