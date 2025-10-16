@@ -24,10 +24,10 @@ find_package(catkin QUIET)
 
 if(ament_cmake_FOUND)
   find_package(ament_index_cpp REQUIRED)
-  find_package(behaviortree_cpp_v3 REQUIRED)
+  find_package(behaviortree_cpp REQUIRED)
 
   set(dependencies
-    behaviortree_cpp_v3
+    behaviortree_cpp
   )
 
   message(STATUS "---------------------")
@@ -38,17 +38,17 @@ elseif(catkin_FOUND OR CATKIN_DEVEL_PREFIX OR CATKIN_BUILD_BINARY_PACKAGE )
   set(catkin_FOUND 1)
   # add_definitions( -DUSING_ROS )
 
-  find_package(catkin REQUIRED COMPONENTS behaviortree_cpp_v3)
+  find_package(catkin REQUIRED COMPONENTS behaviortree_cpp)
 
   message(STATUS "----------------------")
   message(STATUS "Compiling with CATKIN.")
   message(STATUS "----------------------")
 
   catkin_package(
-    INCLUDE_DIRS 
+    INCLUDE_DIRS
     LIBRARIES qt_node_editor
-    CATKIN_DEPENDS behaviortree_cpp_v3
-    DEPENDS 
+    CATKIN_DEPENDS behaviortree_cpp
+    DEPENDS
     )
 endif()
 #############################################################
@@ -166,7 +166,7 @@ if(ament_cmake_FOUND)
 elseif( catkin_FOUND )
     SET(GROOT_DEPENDENCIES ${GROOT_DEPENDENCIES} ${catkin_LIBRARIES} )
 else()
-    SET(GROOT_DEPENDENCIES ${GROOT_DEPENDENCIES} behaviortree_cpp_v3 )
+    SET(GROOT_DEPENDENCIES ${GROOT_DEPENDENCIES} behaviortree_cpp )
 endif()
 
 if( ZMQ_FOUND )
@@ -200,13 +200,13 @@ else()
     set( GROOT_LIB_DESTINATION   lib )
     set( GROOT_INC_DESTINATION   include )
     set( GROOT_BIN_DESTINATION   bin )
-    
+
     INSTALL( FILES ${CMAKE_CURRENT_SOURCE_DIR}/groot_icon.png
 			 DESTINATION share/icons/hicolor/256x256)
-			 
+
 	INSTALL( FILES ${CMAKE_CURRENT_SOURCE_DIR}/Groot.desktop
 			 DESTINATION share/applications)
-    
+
 endif()
 
 INSTALL(TARGETS behavior_tree_editor LIBRARY DESTINATION ${GROOT_LIB_DESTINATION} )
