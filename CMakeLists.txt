@@ -162,7 +162,7 @@ add_library(behavior_tree_editor SHARED
 SET(GROOT_DEPENDENCIES QtNodeEditor ncurses ncursesw tinfo )
 
 if(ament_cmake_FOUND)
-    ament_target_dependencies(behavior_tree_editor ${dependencies})
+    target_link_libraries(behavior_tree_editor PUBLIC behaviortree_cpp::behaviortree_cpp)
 elseif( catkin_FOUND )
     SET(GROOT_DEPENDENCIES ${GROOT_DEPENDENCIES} ${catkin_LIBRARIES} )
 else()
@@ -178,7 +178,7 @@ if( ZMQ_FOUND )
     endif()
 endif()
 
-target_link_libraries(behavior_tree_editor ${GROOT_DEPENDENCIES} )
+target_link_libraries(behavior_tree_editor PUBLIC ${GROOT_DEPENDENCIES} )
 
 
 add_executable(Groot ./bt_editor/main.cpp  ${RESOURCE_FILES})
